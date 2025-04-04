@@ -248,9 +248,11 @@ void PlatformRawAudioData::copyTo(std::span<uint8_t> destination, AudioSampleFor
         GstMappedBuffer mappedBuffer(gst_sample_get_buffer(sourceSample.get()), GST_MAP_READ);
         auto source = mappedBuffer.span<uint8_t>();
         GUniquePtr<GstAudioInfo> sourceInfo(gst_audio_info_copy(audioData.info()));
-        size_t frameOffsetInBytes = frameOffset.value_or(0) * GST_AUDIO_INFO_BPF(sourceInfo.get());
-        RELEASE_ASSERT(frameOffsetInBytes <= source.size());
-        auto subSource = source.subspan(frameOffsetInBytes, source.size() - frameOffsetInBytes);
+        size_t frameSize = GST_AUDIO_INFO_BPF(sourceInfo.get());
+        size_t frameOffsetInBytes = frameOffset.value_or(0) * frameSize;
+        size_t copyLengthInBytes = copyElementCount * frameSize;
+        RELEASE_ASSERT(frameOffsetInBytes + copyLengthInBytes <= source.size());
+        auto subSource = source.subspan(frameOffsetInBytes, copyLengthInBytes);
         memcpySpan(destination, subSource);
         return;
     }

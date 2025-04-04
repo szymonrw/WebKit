@@ -255,9 +255,11 @@ void PlatformRawAudioData::copyTo(std::span<uint8_t> destination, AudioSampleFor
             // Simplest case.
             ASSERT(!planeIndex);
             auto source = sourceList.bufferAsSpan(0);
-            size_t frameOffsetInBytes = frameOffset.value_or(0) * audioData.m_description.bytesPerFrame();
-            RELEASE_ASSERT(frameOffsetInBytes <= source.size());
-            auto subSource = source.subspan(frameOffsetInBytes, source.size() - frameOffsetInBytes);
+            size_t frameSize = audioData.m_description.bytesPerFrame();
+            size_t frameOffsetInBytes = frameOffset.value_or(0) * frameSize;
+            size_t copyLengthInBytes = copyElementCount * frameSize;
+            RELEASE_ASSERT(frameOffsetInBytes + copyLengthInBytes <= source.size());
+            auto subSource = source.subspan(frameOffsetInBytes, copyLengthInBytes);
             memcpySpan(destination, subSource);
             return;
         }
