@@ -245,8 +245,7 @@ void PlatformRawAudioData::copyTo(std::span<uint8_t> destination, AudioSampleFor
 
     // Copy memory when:
     // - formats fully match
-    // - sample format matches and source is mono (planar and interleaved
-    //   have the same layout)
+    // - sample format matches and source is mono (planar and interleaved have the same layout)
     if (sourceFormat == format || (audioSampleElementFormat(sourceFormat) == audioSampleElementFormat(format) && numberOfChannels() == 1)) {
         ASSERT(!isDestinationInterleaved || !planeIndex);
         GstMappedBuffer mappedBuffer(gst_sample_get_buffer(sourceSample.get()), GST_MAP_READ);

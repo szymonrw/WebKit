@@ -252,9 +252,8 @@ void PlatformRawAudioData::copyTo(std::span<uint8_t> destination, AudioSampleFor
 
     // Copy memory when:
     // - formats fully match
-    // - sample format matches and source is mono (planar and interleaved
-    //   have the same layout)
-    if (sourceFormat == format || (audioSampleElementFormat(sourceFormat) == audioSampleElementFormat(format) && numberOfChannels() == 1)) {
+    // - sample format matches and source is mono (planar and interleaved have the same layout)
+    if (sourceFormat == destinationFormat || (audioSampleElementFormat(sourceFormat) == audioSampleElementFormat(destinationFormat) && numberOfChannels() == 1)) {
         ASSERT(!destinationIsInterleaved || !planeIndex);
         auto source = sourceList.bufferAsSpan(planeIndex);
         size_t frameSize = audioData.m_description.bytesPerFrame();
