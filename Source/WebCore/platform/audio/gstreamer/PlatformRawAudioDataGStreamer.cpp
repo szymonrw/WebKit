@@ -245,14 +245,15 @@ void PlatformRawAudioData::copyTo(std::span<uint8_t> destination, AudioSampleFor
 
     // Use memcpy when both source and destination are planar or when
     // both are interleaved and planeIndex is 0
-    if (audioSampleElementFormat(sourceFormat) == audioSampleElementFormat(format) && (!audioData.isInterleaved() || (audioData.isInterleaved() && planeIndex === 0))) {
+    if (audioSampleElementFormat(sourceFormat) == audioSampleElementFormat(format) && (!audioData.isInterleaved() || (audioData.isInterleaved() && planeIndex == 0))) {
         GstMappedBuffer mappedBuffer(gst_sample_get_buffer(sourceSample.get()), GST_MAP_READ);
         auto source = mappedBuffer.span<uint8_t>();
         GUniquePtr<GstAudioInfo> sourceInfo(gst_audio_info_copy(audioData.info()));
-        size_t frameSize = GST_AUDIO_INFO_BPF(sourceInfo.get()) / numberOfChannels();
+        size_t sampleSize = GST_AUDIO_INFO_BPS(sourceInfo.get());
+        size_t frameSize = audioData.isInterleaved() ? GST_AUDIO_INFO_BPF(sourceInfo.get()) : sampleSize;
         size_t planeOffset = planeIndex * numberOfFrames();
         size_t frameOffsetInBytes = (planeOffset + frameOffset.value_or(0)) * frameSize;
-        size_t copyLengthInBytes = copyElementCount * frameSize;
+        size_t copyLengthInBytes = copyElementCount * sampleSize;
         RELEASE_ASSERT(frameOffsetInBytes + copyLengthInBytes <= source.size());
         auto subSource = source.subspan(frameOffsetInBytes, copyLengthInBytes);
         memcpySpan(destination, subSource);

@@ -70,8 +70,8 @@ test(t => {
     ]),
     timestamp: 0,
   });
-  const output = new Float32Array(data.numberOfFrames);
-  data.copyTo(output.subarray(1, 4), {
+  const output = new Float32Array(data.numberOfFrames * data.numberOfChannels);
+  data.copyTo(output.subarray(2, 8), {
     planeIndex: 0,
     frameOffset: 1,
     frameCount: 3,
