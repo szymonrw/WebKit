@@ -251,18 +251,19 @@ void PlatformRawAudioData::copyTo(std::span<uint8_t> destination, AudioSampleFor
     bool destinationIsInterleaved = isAudioSampleFormatInterleaved(destinationFormat);
 
     if (audioSampleElementFormat(sourceFormat) == audioSampleElementFormat(destinationFormat)) {
-        bool noneInterleaved = !audioData.isInterleaved() && !destinationIsInterleaved;
-        bool bothInterleaved = audioData.isInterleaved() && destinationIsInterleaved;
+        // Use memcpy when both source and destination are planar or when
+        // both are interleaved and planeIndex is 0
+        bool planarToPlanar = !audioData.isInterleaved() && !destinationIsInterleaved;
+        // Interleaved frames are copied for all channels at once, only accept planeIndex =0
+        bool interleavedToInterleaved = audioData.isInterleaved() && destinationIsInterleaved && planeIndex == 0;
 
-        // Use memcpy when both source and destination are planar.
-        // Additionally, when both are interleaved and number of
-        // channels is 1, the data layout is the same as planar.
-        if (noneInterleaved || (bothInterleaved && numberOfChannels() == 1)) {
-            RELEASE_ASSERT(planeIndex < numberOfChannels());
+        // Additionally, when number of channels == 1 then planar and
+        // interleaved formats are equivalent in practice
+        if (planarToPlanar || interleavedToInterleaved || numberOfChannels() == 1) {
             auto source = sourceList.bufferAsSpan(planeIndex);
             size_t frameSize = audioData.m_description.bytesPerFrame();
             size_t frameOffsetInBytes = frameOffset.value_or(0) * frameSize;
-            size_t copyLengthInBytes = copyElementCount * frameSize;
+            size_t copyLengthInBytes = copyElementCount * computeBytesPerSample(destinationFormat);
             RELEASE_ASSERT(frameOffsetInBytes + copyLengthInBytes <= source.size());
             auto subSource = source.subspan(frameOffsetInBytes, copyLengthInBytes);
             memcpySpan(destination, subSource);
