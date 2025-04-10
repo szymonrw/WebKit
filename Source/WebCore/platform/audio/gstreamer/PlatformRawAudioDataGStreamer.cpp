@@ -245,7 +245,9 @@ void PlatformRawAudioData::copyTo(std::span<uint8_t> destination, AudioSampleFor
 
     // Use memcpy when both source and destination are planar or when
     // both are interleaved and planeIndex is 0
-    if (audioSampleElementFormat(sourceFormat) == audioSampleElementFormat(format) && (!audioData.isInterleaved() || (audioData.isInterleaved() && planeIndex == 0))) {
+    bool bothPlanar = !audioData.isInterleaved() && !isDestinationInterleaved;
+    bool bothInterleaved = audioData.isInterleaved() && isDestinationInterleaved;
+    if (audioSampleElementFormat(sourceFormat) == audioSampleElementFormat(format) && (bothPlanar || (bothInterleaved && planeIndex == 0))) {
         GstMappedBuffer mappedBuffer(gst_sample_get_buffer(sourceSample.get()), GST_MAP_READ);
         auto source = mappedBuffer.span<uint8_t>();
         GUniquePtr<GstAudioInfo> sourceInfo(gst_audio_info_copy(audioData.info()));
