@@ -251,10 +251,15 @@ void PlatformRawAudioData::copyTo(std::span<uint8_t> destination, AudioSampleFor
     bool destinationIsInterleaved = isAudioSampleFormatInterleaved(destinationFormat);
 
     if (audioSampleElementFormat(sourceFormat) == audioSampleElementFormat(destinationFormat)) {
-        if (numberOfChannels() == 1 || (audioData.isInterleaved() && destinationIsInterleaved)) {
-            // Simplest case.
-            ASSERT(!planeIndex);
-            auto source = sourceList.bufferAsSpan(0);
+        bool noneInterleaved = !audioData.isInterleaved() && !destinationIsInterleaved;
+        bool bothInterleaved = audioData.isInterleaved() && destinationIsInterleaved;
+
+        // Use memcpy when both source and destination are planar.
+        // Additionally, when both are interleaved and number of
+        // channels is 1, the data layout is the same as planar.
+        if (noneInterleaved || (bothInterleaved && numberOfChannels() == 1)) {
+            RELEASE_ASSERT(planeIndex < numberOfChannels());
+            auto source = sourceList.bufferAsSpan(planeIndex);
             size_t frameSize = audioData.m_description.bytesPerFrame();
             size_t frameOffsetInBytes = frameOffset.value_or(0) * frameSize;
             size_t copyLengthInBytes = copyElementCount * frameSize;
