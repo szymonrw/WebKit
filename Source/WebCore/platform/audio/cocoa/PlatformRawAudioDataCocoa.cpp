@@ -250,25 +250,20 @@ void PlatformRawAudioData::copyTo(std::span<uint8_t> destination, AudioSampleFor
     WebAudioBufferList sourceList(audioData.m_description, audioData.sampleBuffer());
     bool destinationIsInterleaved = isAudioSampleFormatInterleaved(destinationFormat);
 
-    if (audioSampleElementFormat(sourceFormat) == audioSampleElementFormat(destinationFormat)) {
-        // Use memcpy when both source and destination are planar or when
-        // both are interleaved and planeIndex is 0
-        bool planarToPlanar = !audioData.isInterleaved() && !destinationIsInterleaved;
-        // Interleaved frames are copied for all channels at once, only accept planeIndex =0
-        bool interleavedToInterleaved = audioData.isInterleaved() && destinationIsInterleaved && planeIndex == 0;
-
-        // Additionally, when number of channels == 1 then planar and
-        // interleaved formats are equivalent in practice
-        if (planarToPlanar || interleavedToInterleaved || numberOfChannels() == 1) {
-            auto source = sourceList.bufferAsSpan(planeIndex);
-            size_t frameSize = audioData.m_description.bytesPerFrame();
-            size_t frameOffsetInBytes = frameOffset.value_or(0) * frameSize;
-            size_t copyLengthInBytes = copyElementCount * computeBytesPerSample(destinationFormat);
-            RELEASE_ASSERT(frameOffsetInBytes + copyLengthInBytes <= source.size());
-            auto subSource = source.subspan(frameOffsetInBytes, copyLengthInBytes);
-            memcpySpan(destination, subSource);
-            return;
-        }
+    // Copy memory when:
+    // - formats fully match
+    // - sample format matches and source is mono (planar and interleaved
+    //   have the same layout)
+    if (sourceFormat == format || (audioSampleElementFormat(sourceFormat) == audioSampleElementFormat(format) && numberOfChannels() == 1)) {
+        ASSERT(!destinationIsInterleaved || !planeIndex);
+        auto source = sourceList.bufferAsSpan(planeIndex);
+        size_t frameSize = audioData.m_description.bytesPerFrame();
+        size_t frameOffsetInBytes = frameOffset.value_or(0) * frameSize;
+        size_t copyLengthInBytes = copyElementCount * computeBytesPerSample(destinationFormat);
+        RELEASE_ASSERT(frameOffsetInBytes + copyLengthInBytes <= source.size());
+        auto subSource = source.subspan(frameOffsetInBytes, copyLengthInBytes);
+        memcpySpan(destination, subSource);
+        return;
     }
 
     auto source = planesOfSamples(sourceFormat, sourceList, frameOffset.value_or(0) * (audioData.isInterleaved() ? numberOfChannels() : 1));
